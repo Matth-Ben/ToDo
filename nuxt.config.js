@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   plugins: ['~/plugins/firebase.js', '~/plugins/fontawesome.js'],  // Référence des plugins Firebase et FontAwesome
   head: {
     link: [
-      { rel: 'manifest', href: '/manifest.json' }
+      { rel: 'manifest', href: '/manifest.json' },
       { rel: 'icon', href: '/icon.png', sizes: '512x512', type: 'image/png' }
     ]
   },
