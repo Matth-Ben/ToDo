@@ -10,7 +10,7 @@ export default defineNuxtConfig({
   head: {
     link: [
       { rel: 'manifest', href: '/manifest.json' },
-      { rel: 'icon', href: '/icon-512.png', sizes: '512x512', type: 'image/png' }
+      { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
     ]
   },
   pwa: {
