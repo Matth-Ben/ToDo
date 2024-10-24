@@ -3,14 +3,10 @@
     <!-- Bouton pour ouvrir/fermer la barre latérale sur mobile -->
     <button
       @click="toggleSidebar"
-      :class="{
-        'left-4': !isSidebarOpen,
-        'left-64 ml-4': isSidebarOpen
-      }"
-      class="lg:hidden absolute top-4 z-50 flex items-center justify-center w-12 h-12 bg-gray-700 text-white rounded-md transition-all duration-300"
+      class="lg:hidden fixed top-4 right-4 z-50 flex items-center justify-center w-12 h-12 bg-gray-700 text-white rounded-md transition-all duration-300"
     >
       <!-- Changement d'icône selon l'état de la sidebar -->
-      <font-awesome-icon :icon="['fas', isSidebarOpen ? 'times' : 'bars']" />
+      <font-awesome-icon :icon="isSidebarOpen ? 'times' : 'bars'" />
     </button>
 
     <!-- Barre latérale gauche (Navbar) -->
@@ -102,10 +98,6 @@ export default {
       return todoStore.todoLists;
     }
   },
-  async created() {
-    const todoStore = useTodoStore();
-    await todoStore.fetchTodoLists(); // Assurez-vous que les listes sont récupérées
-  },
   methods: {
     async addTodoList() {
       if (this.newListTitle.trim() !== '') {
@@ -127,24 +119,33 @@ export default {
     },
     selectList(index) {
       this.selectedListIndex = index;
+
+      // Fermer la navbar en mode mobile seulement
+      if (window.innerWidth < 1024) {
+        this.isSidebarOpen = false;
+      }
     },
     toggleSidebar() {
       this.isSidebarOpen = !this.isSidebarOpen;
     },
     // Capture le début du swipe
     startTouch(event) {
+      // Capture le point de départ du swipe (position en X)
       this.touchStartX = event.touches[0].clientX;
     },
-    // Gestion du swipe pour ouvrir/fermer la sidebar
     handleTouch(event) {
-      const touchEndX = event.touches[0].clientX;
-      const swipeDistance = touchEndX - this.touchStartX;
-      // Swipe à droite pour ouvrir
-      if (swipeDistance > 100) {
+      // Capture le point actuel du swipe (position en X)
+      const touchCurrentX = event.touches[0].clientX;
+
+      // Calcule la distance du swipe
+      const swipeDistance = touchCurrentX - this.touchStartX;
+
+      // Swipe à droite pour ouvrir (distance supérieure à un seuil, par exemple 50px)
+      if (swipeDistance > 50 && !this.isSidebarOpen) {
         this.isSidebarOpen = true;
       }
-      // Swipe à gauche pour fermer
-      if (swipeDistance < -100) {
+      // Swipe à gauche pour fermer (distance inférieure à un seuil)
+      if (swipeDistance < -50 && this.isSidebarOpen) {
         this.isSidebarOpen = false;
       }
     }
