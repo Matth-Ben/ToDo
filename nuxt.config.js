@@ -22,13 +22,36 @@ export default defineNuxtConfig({
       icons: [
         {
           src: '/icon.png',
+          sizes: '192x192',
+          type: 'image/png'
+        },
+        {
+          src: '/icon.png',
           sizes: '512x512',
           type: 'image/png'
         }
       ]
     },
     workbox: {
-      offline: true, // Activer les fonctionnalités hors ligne
+      mode: 'production',  // Mode production pour générer le service worker
+      navigateFallback: '/index.html',  // Redirection pour les pages hors ligne
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/,  // Exemple pour Firestore
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'api-cache',
+            networkTimeoutSeconds: 10,
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 30 * 24 * 60 * 60, // 30 jours
+            },
+            cacheableResponse: {
+              statuses: [0, 200]
+            }
+          }
+        }
+      ]
     }
-  }
+  },
 });
