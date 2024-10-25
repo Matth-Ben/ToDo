@@ -41,18 +41,21 @@
 
             <!-- Section en bas : Champ texte et bouton "Ajouter une liste" -->
             <div class="mt-4">
-            <input
-                v-model="newListTitle"
-                placeholder="Ajouter une nouvelle liste"
-                class="w-full p-2 bg-gray-700 text-white rounded mb-2"
-                @keyup.enter="addTodoList"
-            />
-            <button
-                @click="addTodoList"
-                class="bg-blue-600 hover:bg-blue-500 text-white py-2 w-full rounded-lg transition"
-            >
-                Ajouter une liste
-            </button>
+                <input
+                    v-model="newListTitle"
+                    placeholder="Ajouter une nouvelle liste"
+                    class="w-full p-2 bg-gray-700 text-white rounded mb-2"
+                    @keyup.enter="addTodoList"
+                />
+                <button
+                    @click="addTodoList"
+                    class="bg-blue-600 hover:bg-blue-500 text-white py-2 w-full rounded-lg transition"
+                >
+                    Ajouter une liste
+                </button>
+                <button @click="logout" class="bg-red-600 w-full p-2 rounded-lg hover:bg-red-500 mt-4">
+                    Déconnexion
+                </button>
             </div>
         </aside>
 
@@ -76,6 +79,7 @@
 <script>
 import { useTodoStore } from '@/store/todo';
 import TodoList from '@/components/TodoList.vue';
+import { getAuth, signOut } from "firebase/auth";
 
 export default {
     components: {
@@ -116,6 +120,15 @@ export default {
             if (newTitle !== null && newTitle.trim() !== '') {
                 const todoStore = useTodoStore();
                 await todoStore.updateTodoList(index, newTitle);
+            }
+        },
+        async logout() {
+            const auth = getAuth();
+            try {
+                await signOut(auth);
+                this.$router.push("/login"); // Redirection vers la page de login après déconnexion
+            } catch (error) {
+                console.error("Erreur lors de la déconnexion :", error);
             }
         },
         selectList(index) {

@@ -13,6 +13,12 @@ export default defineNuxtConfig({
       { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
     ]
   },
+  router: {
+    middleware: ["auth"]
+  },
+  routeRules: {
+    "/**": { middleware: "auth" }
+  },
   pwa: {
     manifest: {
       name: 'ToDo App',
