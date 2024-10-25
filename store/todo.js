@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
-import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore'; // Import arrayRemove pour supprimer
-import { useNuxtApp } from '#app'; // Import de useNuxtApp
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, arrayUnion, arrayRemove, query, where } from 'firebase/firestore'; // Import de `query` et `where`
+import { useNuxtApp } from '#app'; // Import de `useNuxtApp`
+import { getAuth } from 'firebase/auth';
 
 export const useTodoStore = defineStore('todo', {
   state: () => ({
@@ -9,22 +10,37 @@ export const useTodoStore = defineStore('todo', {
   actions: {
     async fetchTodoLists() {
       const { $db } = useNuxtApp();
-      try {
-        const querySnapshot = await getDocs(collection($db, 'todoLists'));
-        const lists = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        this.todoLists = lists;
-      } catch (error) {
-        console.error('Erreur lors de la récupération des listes de tâches :', error);
+      const auth = getAuth();
+      const user = auth.currentUser;
+
+      if (user) {
+        try {
+          const q = query(collection($db, 'todoLists'), where('userId', '==', user.uid)); // Filtre par userId
+          const querySnapshot = await getDocs(q);
+          const lists = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          this.todoLists = lists;
+        } catch (error) {
+          console.error('Erreur lors de la récupération des listes de tâches :', error);
+        }
       }
     },
 
     async addTodoList(title) {
       const { $db } = useNuxtApp();
-      try {
-        const docRef = await addDoc(collection($db, 'todoLists'), { title, tasks: [] });
-        this.todoLists.push({ id: docRef.id, title, tasks: [] });
-      } catch (error) {
-        console.error("Erreur lors de l'ajout de la liste de tâches :", error);
+      const auth = getAuth();
+      const user = auth.currentUser;
+
+      if (user) {
+        try {
+          const docRef = await addDoc(collection($db, 'todoLists'), {
+            title,
+            tasks: [],
+            userId: user.uid // Associe l'UID de l'utilisateur
+          });
+          this.todoLists.push({ id: docRef.id, title, tasks: [], userId: user.uid });
+        } catch (error) {
+          console.error("Erreur lors de l'ajout de la liste de tâches :", error);
+        }
       }
     },
 
@@ -45,31 +61,26 @@ export const useTodoStore = defineStore('todo', {
       }
     },
 
-    // Modifier une tâche
     async updateTask(listIndex, taskIndex, newTask) {
       const { $db } = useNuxtApp();
       try {
         const listId = this.todoLists[listIndex].id;
         const listDoc = doc($db, 'todoLists', listId);
-
         const oldTask = this.todoLists[listIndex].tasks[taskIndex];
 
-        // Supprimer l'ancienne tâche et ajouter la nouvelle tâche modifiée
         await updateDoc(listDoc, {
-          tasks: arrayRemove(oldTask) // Supprimer l'ancienne tâche
+          tasks: arrayRemove(oldTask)
         });
         await updateDoc(listDoc, {
-          tasks: arrayUnion(newTask) // Ajouter la nouvelle tâche modifiée
+          tasks: arrayUnion(newTask)
         });
 
-        // Mettre à jour localement
         this.todoLists[listIndex].tasks[taskIndex] = newTask;
       } catch (error) {
         console.error('Erreur lors de la mise à jour de la tâche :', error);
       }
     },
 
-    // Supprimer une tâche
     async deleteTask(listIndex, taskIndex) {
       const { $db } = useNuxtApp();
       try {
@@ -77,15 +88,43 @@ export const useTodoStore = defineStore('todo', {
         const taskToDelete = this.todoLists[listIndex].tasks[taskIndex];
         const listDoc = doc($db, 'todoLists', listId);
 
-        // Supprimer la tâche de Firestore
         await updateDoc(listDoc, {
           tasks: arrayRemove(taskToDelete)
         });
 
-        // Supprimer la tâche localement
         this.todoLists[listIndex].tasks.splice(taskIndex, 1);
       } catch (error) {
         console.error('Erreur lors de la suppression de la tâche :', error);
+      }
+    },
+
+    // Ajoute ces actions dans le store
+    async updateTodoList(listId, newTitle) {
+      const { $db } = useNuxtApp();
+      try {
+          const listDoc = doc($db, 'todoLists', listId); // Utilise l'ID de la liste
+          await updateDoc(listDoc, {
+              title: newTitle
+          });
+
+          // Mets à jour l'état local
+          const index = this.todoLists.findIndex(list => list.id === listId);
+          if (index !== -1) this.todoLists[index].title = newTitle;
+      } catch (error) {
+          console.error("Erreur lors de la mise à jour de la liste :", error);
+      }
+    },
+
+    async deleteTodoList(listId) {
+      const { $db } = useNuxtApp();
+      try {
+          const listDoc = doc($db, 'todoLists', listId); // Utilise l'ID de la liste
+          await deleteDoc(listDoc);
+
+          // Mets à jour l'état local
+          this.todoLists = this.todoLists.filter(list => list.id !== listId);
+      } catch (error) {
+          console.error("Erreur lors de la suppression de la liste :", error);
       }
     }
   }

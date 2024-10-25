@@ -113,13 +113,15 @@ export default {
         },
         async deleteTodoList(index) {
             const todoStore = useTodoStore();
-            await todoStore.deleteTodoList(index);
+            const listId = this.todoLists[index].id; // Utilise l'ID de la liste
+            await todoStore.deleteTodoList(listId); // Passe l'ID au lieu de l'index
         },
         async editTodoList(index) {
             const newTitle = prompt('Modifier le titre de la liste:', this.todoLists[index].title);
             if (newTitle !== null && newTitle.trim() !== '') {
                 const todoStore = useTodoStore();
-                await todoStore.updateTodoList(index, newTitle);
+                const listId = this.todoLists[index].id; // Utilise l'ID de la liste
+                await todoStore.updateTodoList(listId, newTitle); // Passe l'ID au lieu de l'index
             }
         },
         async logout() {
@@ -132,33 +134,26 @@ export default {
             }
         },
         selectList(index) {
-        this.selectedListIndex = index;
+            this.selectedListIndex = index;
 
-        // Fermer la navbar en mode mobile seulement
-        if (window.innerWidth < 1024) {
-            this.isSidebarOpen = false;
-        }
+            // Fermer la navbar en mode mobile seulement
+            if (window.innerWidth < 1024) {
+                this.isSidebarOpen = false;
+            }
         },
         toggleSidebar() {
             this.isSidebarOpen = !this.isSidebarOpen;
         },
-        // Capture le début du swipe
         startTouch(event) {
-            // Capture le point de départ du swipe (position en X)
             this.touchStartX = event.touches[0].clientX;
         },
         handleTouch(event) {
-            // Capture le point actuel du swipe (position en X)
             const touchCurrentX = event.touches[0].clientX;
-
-            // Calcule la distance du swipe
             const swipeDistance = touchCurrentX - this.touchStartX;
 
-            // Swipe à droite pour ouvrir (distance supérieure à un seuil, par exemple 50px)
             if (swipeDistance > 50 && !this.isSidebarOpen) {
                 this.isSidebarOpen = true;
             }
-            // Swipe à gauche pour fermer (distance inférieure à un seuil)
             if (swipeDistance < -50 && this.isSidebarOpen) {
                 this.isSidebarOpen = false;
             }
