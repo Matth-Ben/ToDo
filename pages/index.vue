@@ -69,7 +69,13 @@
         <!-- Contenu principal -->
         <main class="flex-1 p-6 overflow-y-auto h-full">
             <div v-if="selectedListIndex !== null" class="space-y-6">
-                <h2 class="text-2xl font-bold mb-6">{{ todoLists[selectedListIndex].title }}</h2>
+                <h2 class="text-2xl font-bold mb-2">
+                    {{ todoLists[selectedListIndex].title }}
+                    <!-- Ajout de l'info du nombre de tâches -->
+                    <span class="text-gray-400 text-sm ml-2">
+                        ({{ countCompletedTasks(todoLists[selectedListIndex].tasks) }}/{{ todoLists[selectedListIndex].tasks.length }} terminées)
+                    </span>
+                </h2>
                 <TodoList :list="todoLists[selectedListIndex]" :listIndex="selectedListIndex" />
             </div>
         </main>
@@ -157,6 +163,9 @@ export default {
             if (swipeDistance < -50 && this.isSidebarOpen) {
                 this.isSidebarOpen = false;
             }
+        },
+        countCompletedTasks(tasks) {
+            return tasks.filter(task => task.completed).length;
         }
     }
 };

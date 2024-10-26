@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
-import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, arrayUnion, arrayRemove, query, where } from 'firebase/firestore'; // Import de `query` et `where`
-import { useNuxtApp } from '#app'; // Import de `useNuxtApp`
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { useNuxtApp } from '#app';
 import { getAuth } from 'firebase/auth';
 
 export const useTodoStore = defineStore('todo', {
@@ -15,7 +15,7 @@ export const useTodoStore = defineStore('todo', {
 
       if (user) {
         try {
-          const q = query(collection($db, 'todoLists'), where('userId', '==', user.uid)); // Filtre par userId
+          const q = query(collection($db, 'todoLists'), where('userId', '==', user.uid));
           const querySnapshot = await getDocs(q);
           const lists = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           this.todoLists = lists;
@@ -35,7 +35,7 @@ export const useTodoStore = defineStore('todo', {
           const docRef = await addDoc(collection($db, 'todoLists'), {
             title,
             tasks: [],
-            userId: user.uid // Associe l'UID de l'utilisateur
+            userId: user.uid
           });
           this.todoLists.push({ id: docRef.id, title, tasks: [], userId: user.uid });
         } catch (error) {
@@ -48,36 +48,32 @@ export const useTodoStore = defineStore('todo', {
       const { $db } = useNuxtApp();
       try {
         const listId = this.todoLists[listIndex].id;
-        const newTask = { text: task, completed: false };
+        const newTask = { text: task, completed: false, description: '', subtasks: [] };
         const listDoc = doc($db, 'todoLists', listId);
 
-        await updateDoc(listDoc, {
-          tasks: arrayUnion(newTask)
-        });
+        const updatedTasks = [...this.todoLists[listIndex].tasks, newTask];
+        await updateDoc(listDoc, { tasks: updatedTasks });
 
-        this.todoLists[listIndex].tasks.push(newTask);
+        this.todoLists[listIndex].tasks = updatedTasks;
       } catch (error) {
-        console.error('Erreur lors de l\'ajout de la tâche :', error);
+        console.error("Erreur lors de l'ajout de la tâche :", error);
       }
     },
 
-    async updateTask(listIndex, taskIndex, newTask) {
+    async updateTask(listIndex, taskIndex, updatedTask) {
       const { $db } = useNuxtApp();
       try {
         const listId = this.todoLists[listIndex].id;
         const listDoc = doc($db, 'todoLists', listId);
-        const oldTask = this.todoLists[listIndex].tasks[taskIndex];
 
-        await updateDoc(listDoc, {
-          tasks: arrayRemove(oldTask)
-        });
-        await updateDoc(listDoc, {
-          tasks: arrayUnion(newTask)
-        });
+        // Mets à jour la tâche dans l'état local
+        const updatedTasks = [...this.todoLists[listIndex].tasks];
+        updatedTasks[taskIndex] = updatedTask;
 
-        this.todoLists[listIndex].tasks[taskIndex] = newTask;
+        await updateDoc(listDoc, { tasks: updatedTasks });
+        this.todoLists[listIndex].tasks = updatedTasks;
       } catch (error) {
-        console.error('Erreur lors de la mise à jour de la tâche :', error);
+        console.error("Erreur lors de la mise à jour de la tâche :", error);
       }
     },
 
@@ -85,46 +81,15 @@ export const useTodoStore = defineStore('todo', {
       const { $db } = useNuxtApp();
       try {
         const listId = this.todoLists[listIndex].id;
-        const taskToDelete = this.todoLists[listIndex].tasks[taskIndex];
         const listDoc = doc($db, 'todoLists', listId);
 
-        await updateDoc(listDoc, {
-          tasks: arrayRemove(taskToDelete)
-        });
+        const updatedTasks = [...this.todoLists[listIndex].tasks];
+        updatedTasks.splice(taskIndex, 1);
 
-        this.todoLists[listIndex].tasks.splice(taskIndex, 1);
+        await updateDoc(listDoc, { tasks: updatedTasks });
+        this.todoLists[listIndex].tasks = updatedTasks;
       } catch (error) {
-        console.error('Erreur lors de la suppression de la tâche :', error);
-      }
-    },
-
-    // Ajoute ces actions dans le store
-    async updateTodoList(listId, newTitle) {
-      const { $db } = useNuxtApp();
-      try {
-          const listDoc = doc($db, 'todoLists', listId); // Utilise l'ID de la liste
-          await updateDoc(listDoc, {
-              title: newTitle
-          });
-
-          // Mets à jour l'état local
-          const index = this.todoLists.findIndex(list => list.id === listId);
-          if (index !== -1) this.todoLists[index].title = newTitle;
-      } catch (error) {
-          console.error("Erreur lors de la mise à jour de la liste :", error);
-      }
-    },
-
-    async deleteTodoList(listId) {
-      const { $db } = useNuxtApp();
-      try {
-          const listDoc = doc($db, 'todoLists', listId); // Utilise l'ID de la liste
-          await deleteDoc(listDoc);
-
-          // Mets à jour l'état local
-          this.todoLists = this.todoLists.filter(list => list.id !== listId);
-      } catch (error) {
-          console.error("Erreur lors de la suppression de la liste :", error);
+        console.error("Erreur lors de la suppression de la tâche :", error);
       }
     },
 
@@ -132,20 +97,14 @@ export const useTodoStore = defineStore('todo', {
       const { $db } = useNuxtApp();
       try {
         const listId = this.todoLists[listIndex].id;
-        const task = this.todoLists[listIndex].tasks[taskIndex];
-        const updatedTask = { ...task, completed: !task.completed }; // Inverse l'état de completion
         const listDoc = doc($db, 'todoLists', listId);
-    
-        // Supprime l'ancienne version de la tâche et ajoute la nouvelle avec le statut mis à jour
-        await updateDoc(listDoc, {
-          tasks: arrayRemove(task)
-        });
-        await updateDoc(listDoc, {
-          tasks: arrayUnion(updatedTask)
-        });
-    
-        // Mets à jour l'état local
-        this.todoLists[listIndex].tasks[taskIndex] = updatedTask;
+
+        // Mets à jour l'état de la tâche localement
+        const updatedTasks = [...this.todoLists[listIndex].tasks];
+        updatedTasks[taskIndex].completed = !updatedTasks[taskIndex].completed;
+
+        await updateDoc(listDoc, { tasks: updatedTasks });
+        this.todoLists[listIndex].tasks = updatedTasks;
       } catch (error) {
         console.error("Erreur lors de la mise à jour de l'état de la tâche :", error);
       }
