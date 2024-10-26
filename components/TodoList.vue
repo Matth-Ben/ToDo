@@ -10,38 +10,53 @@
       <li
         v-for="(task, index) in list.tasks"
         :key="index"
-        class="flex justify-between items-center bg-gray-800 p-4 rounded-lg"
+        class="flex justify-between items-center bg-gray-800 p-4 rounded-lg cursor-pointer"
       >
-        <div class="flex items-center w-full">
-          <input
-            type="checkbox"
-            v-model="task.completed"
-            class="mr-2 cursor-pointer"
-          />
-          <!-- Affiche le texte ou l'input en fonction de l'état d'édition -->
-          <span
-            v-if="editingTaskIndex !== index"
-            @click="setEditingTask(index)"
-            :class="{ 'line-through': task.completed }"
-            class="flex-grow cursor-pointer"
-          >
-            {{ task.text }}
-          </span>
-          <input
-            v-else
-            v-model="editingTaskText"
-            @blur="saveTask(index)"
-            @keyup.enter="saveTask(index)"
-            @keyup.esc="cancelEdit"
-            class="bg-gray-700 text-white p-1 rounded w-full"
-          />
-        </div>
-        <!-- Icone FontAwesome pour supprimer la tâche -->
+        <input
+          type="checkbox"
+          v-model="task.completed"
+          class="mr-2 cursor-pointer"
+          @change="toggleTaskCompletion(index)"
+        />
+        <span @click="openModal(index)" :class="{ 'line-through': task.completed }" class="flex-grow">
+          {{ task.text }}
+        </span>
         <button @click="deleteTask(index)" class="text-red-500 hover:text-red-400">
           <font-awesome-icon icon="trash" />
         </button>
       </li>
     </ul>
+
+    <!-- Modal pour modifier la tâche -->
+    <div v-if="isModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50" @click.self="closeModal">
+      <div class="bg-gray-800 text-white p-6 rounded-lg w-full max-w-md relative">
+        <!-- Icône de fermeture en haut à droite -->
+        <button @click="closeModal" class="absolute top-3 right-3 text-gray-400 hover:text-gray-300">
+          <font-awesome-icon icon="times" />
+        </button>
+
+        <!-- Toujours afficher le champ textarea pour le titre -->
+        <h2 class="text-xl font-semibold mb-4">
+          <textarea
+            v-model="editingTaskText"
+            class="text-lg resize-none w-full outline-none text-white no-scrollbar"
+            rows="1"
+            ref="taskTextarea"
+            @input="adjustTextareaHeight"
+          ></textarea>
+        </h2>
+
+        <!-- Boutons d'action -->
+        <div class="flex justify-between items-center mt-6">
+          <button @click="deleteTask(editingTaskIndex)" class="text-red-500 hover:text-red-400">
+            <font-awesome-icon icon="trash" />
+          </button>
+          <button @click="saveTask(editingTaskIndex)" class="bg-blue-600 p-2 rounded-lg hover:bg-blue-500 lg:w-auto w-full">
+            Enregistrer
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -54,7 +69,8 @@ export default {
     return {
       newTask: '',
       editingTaskIndex: null,
-      editingTaskText: ''
+      editingTaskText: '',
+      isModalOpen: false,
     };
   },
   methods: {
@@ -68,23 +84,39 @@ export default {
     async deleteTask(taskIndex) {
       const todoStore = useTodoStore();
       await todoStore.deleteTask(this.listIndex, taskIndex);
+      this.closeModal();
     },
-    setEditingTask(taskIndex) {
+    toggleTaskCompletion(taskIndex) {
+      const todoStore = useTodoStore();
+      todoStore.toggleTask(this.listIndex, taskIndex);
+    },
+    openModal(taskIndex) {
       this.editingTaskIndex = taskIndex;
       this.editingTaskText = this.list.tasks[taskIndex].text;
+      this.isModalOpen = true;
+      this.$nextTick(() => this.adjustTextareaHeight());
+    },
+    closeModal() {
+      this.isModalOpen = false;
+      this.editingTaskText = '';
+      this.editingTaskIndex = null;
     },
     async saveTask(taskIndex) {
       if (this.editingTaskText.trim() !== '') {
         const todoStore = useTodoStore();
         const updatedTask = { ...this.list.tasks[taskIndex], text: this.editingTaskText };
         await todoStore.updateTask(this.listIndex, taskIndex, updatedTask);
-        this.editingTaskIndex = null;
+        this.closeModal();
       }
     },
-    cancelEdit() {
-      this.editingTaskIndex = null;
+    adjustTextareaHeight() {
+      const textarea = this.$refs.taskTextarea;
+      if (textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+      }
     }
-  }
+  },
 };
 </script>
 
@@ -92,15 +124,9 @@ export default {
 .line-through {
   text-decoration: line-through;
 }
-@media (max-width: 640px) {
-  li {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  button {
-    align-self: flex-end;
-    margin-top: 8px;
-  }
+textarea.no-scrollbar {
+  background: none;
+  border: none;
+  overflow: hidden;
 }
 </style>

@@ -126,6 +126,29 @@ export const useTodoStore = defineStore('todo', {
       } catch (error) {
           console.error("Erreur lors de la suppression de la liste :", error);
       }
+    },
+
+    async toggleTask(listIndex, taskIndex) {
+      const { $db } = useNuxtApp();
+      try {
+        const listId = this.todoLists[listIndex].id;
+        const task = this.todoLists[listIndex].tasks[taskIndex];
+        const updatedTask = { ...task, completed: !task.completed }; // Inverse l'état de completion
+        const listDoc = doc($db, 'todoLists', listId);
+    
+        // Supprime l'ancienne version de la tâche et ajoute la nouvelle avec le statut mis à jour
+        await updateDoc(listDoc, {
+          tasks: arrayRemove(task)
+        });
+        await updateDoc(listDoc, {
+          tasks: arrayUnion(updatedTask)
+        });
+    
+        // Mets à jour l'état local
+        this.todoLists[listIndex].tasks[taskIndex] = updatedTask;
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour de l'état de la tâche :", error);
+      }
     }
   }
 });
