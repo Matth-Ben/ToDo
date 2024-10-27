@@ -19,6 +19,7 @@
     "firebase": "^11.0.1",
     "nuxt": "^3.13.2",
     "pinia": "^2.2.4",
+    "uuid": "^11.0.0",
     "vue": "latest",
     "vue-router": "latest"
   },
