@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore'; // Firestore SDK
+import { getAuth } from 'firebase/auth';
 
 // Configuration Firebase
 const firebaseConfig = {
@@ -18,11 +19,15 @@ const app = initializeApp(firebaseConfig);
 // Initialisation de Firestore
 const db = getFirestore(app);
 
+// Initialisation de Firebase Auth
+const auth = getAuth(app);
+
 // Exporter le plugin pour Nuxt 3
 export default defineNuxtPlugin(() => {
   return {
     provide: {
-      db
+      db,
+      auth
     }
   };
 });

@@ -10,24 +10,39 @@ export const useTodoStore = defineStore('todo', {
   }),
   actions: {
     async fetchTodoLists() {
-      const { $db } = useNuxtApp();
-      const auth = getAuth();
-      const user = auth.currentUser;
-
+      const { $db, $auth } = useNuxtApp();
+      const user = $auth.currentUser;
+    
       if (user) {
         try {
-          const q = query(collection($db, 'todoLists'), where('userId', '==', user.uid));
-          const querySnapshot = await getDocs(q);
-          const lists = querySnapshot.docs.map((doc) => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              title: data.title || '',
-              tasks: data.tasks || [],
-              userId: data.userId || '',
-            };
-          });
-          this.todoLists = lists;
+          const ownerQuery = query(
+            collection($db, 'todoLists'),
+            where('ownerId', '==', user.uid)
+          );
+    
+          const sharedQuery = query(
+            collection($db, 'todoLists'),
+            where('sharedWith', 'array-contains', user.uid)
+          );
+    
+          const [ownerListsSnapshot, sharedListsSnapshot] = await Promise.all([
+            getDocs(ownerQuery),
+            getDocs(sharedQuery),
+          ]);
+    
+          const ownerLists = ownerListsSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+    
+          const sharedLists = sharedListsSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+    
+          const allLists = [...ownerLists, ...sharedLists];
+    
+          this.todoLists = allLists;
         } catch (error) {
           console.error('Erreur lors de la récupération des listes de tâches :', error);
         }
@@ -35,18 +50,18 @@ export const useTodoStore = defineStore('todo', {
     },
 
     async addTodoList(title) {
-      const { $db } = useNuxtApp();
-      const auth = getAuth();
-      const user = auth.currentUser;
-
+      const { $db, $auth } = useNuxtApp();
+      const user = $auth.currentUser;
+    
       if (user) {
         try {
           const docRef = await addDoc(collection($db, 'todoLists'), {
             title,
             tasks: [],
-            userId: user.uid,
+            ownerId: user.uid,
+            sharedWith: [], // Initialiser avec un tableau vide
           });
-          this.todoLists.push({ id: docRef.id, title, tasks: [], userId: user.uid });
+          this.todoLists.push({ id: docRef.id, title, tasks: [], ownerId: user.uid, sharedWith: [] });
         } catch (error) {
           console.error("Erreur lors de l'ajout de la liste de tâches :", error);
         }
@@ -179,6 +194,27 @@ export const useTodoStore = defineStore('todo', {
         }
       } catch (error) {
         console.error("Erreur lors de la mise à jour de l'état de la tâche :", error);
+      }
+    },
+
+    async shareListWithUser(listIndex, sharedUserUid) {
+      const { $db } = useNuxtApp();
+      try {
+        const listId = this.todoLists[listIndex].id;
+        const listDocRef = doc($db, 'todoLists', listId);
+
+        // Mettre à jour le champ `sharedWith`
+        await updateDoc(listDocRef, {
+          sharedWith: arrayUnion(sharedUserUid),
+        });
+
+        // Mettre à jour l'état local
+        if (!this.todoLists[listIndex].sharedWith) {
+          this.todoLists[listIndex].sharedWith = [];
+        }
+        this.todoLists[listIndex].sharedWith.push(sharedUserUid);
+      } catch (error) {
+        console.error('Erreur lors du partage de la liste :', error);
       }
     },
   },

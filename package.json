@@ -17,6 +17,7 @@
     "@pinia/nuxt": "^0.5.5",
     "@vite-pwa/nuxt": "^0.10.5",
     "firebase": "^11.0.1",
+    "firebase-admin": "^12.7.0",
     "nuxt": "^3.13.2",
     "pinia": "^2.2.4",
     "uuid": "^11.0.0",
