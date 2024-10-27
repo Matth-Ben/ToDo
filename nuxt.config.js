@@ -44,4 +44,7 @@ export default defineNuxtConfig({
       navigateFallback: '/index.html',
     }
   },
+  build: {
+    transpile: ['uuid']
+  }
 });
