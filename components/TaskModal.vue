@@ -93,27 +93,28 @@ export default {
       this.localTask.subtasks.splice(subIndex, 1);
     },
     saveTask() {
-      // Vérifier que l'ID est présent
-      if (!this.localTask.id) {
-        console.error("L'ID de la tâche est manquant dans TaskModal.");
-        return;
-      }
-
-      // Vérifier que le texte de la tâche n'est pas vide
+      // Vérifier que le titre de la tâche n'est pas vide
       if (!this.localTask.text || this.localTask.text.trim() === '') {
-        alert('Le titre de la tâche ne peut pas être vide.');
-        return;
+        alert('Le titre de la tâche ne peut pas être vide.')
+        return
       }
 
-      // Nettoyer les données des sous-tâches
-      if (this.localTask.subtasks) {
-        this.localTask.subtasks = this.localTask.subtasks.map(subtask => ({
-          text: subtask.text || '',
-          completed: subtask.completed || false
-        }));
+      // Créer un nouvel objet tâche nettoyé
+      const cleanedTask = {
+        id: this.localTask.id,
+        text: this.localTask.text.trim(),
+        description: this.localTask.description || '',
+        completed: this.localTask.completed || false,
+        archived: this.localTask.archived !== undefined ? this.localTask.archived : false,
+        subtasks: this.localTask.subtasks
+          ? this.localTask.subtasks.map(subtask => ({
+              text: subtask.text || '',
+              completed: subtask.completed || false,
+            }))
+          : [],
       }
 
-      this.$emit('save', this.localTask);
+      this.$emit('save', cleanedTask)
     },
     deleteTask() {
       this.$emit('delete');
